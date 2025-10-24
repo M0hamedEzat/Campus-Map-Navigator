@@ -539,6 +539,9 @@ int main(int argc, char* argv[]) {
             current = bestPrevious[current];
         }
 
+        std::cerr << "--- Shortest Path Found ---" << std::endl;
+
+
         // Print the path in "A -> B -> C" format
         while (!path.isEmpty()) {
             int vertex = path.pop();
@@ -550,7 +553,6 @@ int main(int argc, char* argv[]) {
         std::cout << std::endl;
         
         // --- Optional: Print human-readable summary to cerr ---
-        std::cerr << "--- Shortest Path Found ---" << std::endl;
         std::cerr << "From: " << startArg << " (via " << bestStartName << ")" << std::endl;
         std::cerr << "To:   " << endArg << " (via " << bestEndName << ")" << std::endl;
         std::cerr << "Distance: " << bestDistance << std::endl;
