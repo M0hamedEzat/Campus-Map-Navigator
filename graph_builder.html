@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Graph Builder</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #f0f0f0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 5px;
+      }
+
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      button {
+        padding: 10px 20px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      button.danger {
+        background: #f44336;
+      }
+
+      button.danger:hover {
+        background: #da190b;
+      }
+
+      button.secondary {
+        background: #2196f3;
+      }
+
+      button.secondary:hover {
+        background: #0b7dda;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      select {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      label {
+        font-weight: bold;
+        color: #555;
+      }
+
+      #canvasContainer {
+        position: relative;
+        border: 2px solid #ddd;
+        overflow: auto;
+        max-height: 800px;
+        background: #fafafa;
+      }
+
+      canvas {
+        cursor: crosshair;
+        display: block;
+      }
+
+      .mode-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: #333;
+        color: white;
+        border-radius: 5px;
+        font-weight: bold;
+        z-index: 1000;
+      }
+
+      .stats {
+        display: flex;
+        gap: 20px;
+        margin-top: 20px;
+        padding: 15px;
+        background: #e3f2fd;
+        border-radius: 5px;
+      }
+
+      .stat {
+        font-size: 16px;
+        font-weight: bold;
+      }
+
+      .instructions {
+        margin-top: 20px;
+        padding: 15px;
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        border-radius: 5px;
+      }
+
+      .instructions h3 {
+        margin-bottom: 10px;
+        color: #856404;
+      }
+
+      .instructions ul {
+        margin-left: 20px;
+        color: #856404;
+      }
+
+      .instructions li {
+        margin: 5px 0;
+      }
+
+      .zoom-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        z-index: 100;
+      }
+
+      .zoom-btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border: 2px solid #333;
+        color: #333;
+      }
+
+      .zoom-btn:hover {
+        background: #e0e0e0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🗺️ Interactive Graph Builder for Pathfinding</h1>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Load Floor Plan:</label>
+          <input type="file" id="imageUpload" accept="image/*" />
+        </div>
+
+        <div class="control-group">
+          <label>Node ID:</label>
+          <input type="text" id="nodeId" placeholder="P001" value="P001" />
+        </div>
+
+        <div class="control-group">
+          <label>Node Type:</label>
+          <select id="nodeType">
+            <option value="room">Room</option>
+            <option value="classroom">Classroom</option>
+
+            <option value="hallway">Hallway</option>
+            <option value="entrance">Entrance</option>
+            <option value="elevator">Elevator</option>
+            <option value="stairs">Stairs</option>
+            <option value="restroom">Restroom</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>Edge Weight:</label>
+          <input type="number" id="edgeWeight" value="100" min="1" />
+        </div>
+
+        <div class="control-group">
+          <label>Auto-calculate Weight:</label>
+          <input type="checkbox" id="autoWeight" checked />
+        </div>
+
+        <div class="control-group">
+          <label>Distance Factor:</label>
+          <input
+            type="number"
+            id="distanceFactor"
+            value="1"
+            min="0.1"
+            step="0.1"
+            title="Multiply pixel distance by this factor"
+          />
+        </div>
+
+        <button id="addNodeBtn" class="secondary">Add Node Mode</button>
+        <button id="addEdgeBtn" class="secondary">Add Edge Mode</button>
+        <button id="deleteBtn" class="danger">Delete Mode</button>
+        <button id="clearBtn" class="danger">Clear All</button>
+        <button id="exportBtn">📥 Export JSON</button>
+        <button id="importBtn" class="secondary">📤 Import JSON</button>
+        <input
+          type="file"
+          id="jsonUpload"
+          accept=".json"
+          style="display: none"
+        />
+      </div>
+
+      <div class="mode-indicator" id="modeIndicator">Mode: Add Node</div>
+
+      <div id="canvasContainer">
+        <div class="zoom-controls">
+          <button class="zoom-btn" id="zoomIn" title="Zoom In">+</button>
+          <button class="zoom-btn" id="zoomReset" title="Reset Zoom">⊙</button>
+          <button class="zoom-btn" id="zoomOut" title="Zoom Out">−</button>
+        </div>
+        <canvas id="canvas"></canvas>
+      </div>
+
+      <div class="stats">
+        <div class="stat">Nodes: <span id="nodeCount">0</span></div>
+        <div class="stat">Edges: <span id="edgeCount">0</span></div>
+      </div>
+
+      <div class="instructions">
+        <h3>📋 Instructions:</h3>
+        <ul>
+          <li>
+            <strong>Load Image:</strong> Click "Choose File" to load your floor
+            plan
+          </li>
+          <li>
+            <strong>Add Nodes:</strong> Click "Add Node Mode", enter node ID and
+            type, then click on the image
+          </li>
+          <li>
+            <strong>Add Edges:</strong> Click "Add Edge Mode", then click two
+            nodes to connect them
+          </li>
+          <li>
+            <strong>Delete:</strong> Click "Delete Mode", then click on nodes or
+            edges to remove them
+          </li>
+          <li>
+            <strong>Export:</strong> Click "Export JSON" to download your graph
+            data
+          </li>
+          <li>
+            <strong>Zoom:</strong> Use +/- buttons, mouse wheel, or pinch
+            gesture to zoom
+          </li>
+          <li>
+            <strong>Pan:</strong> Click and drag on empty space to pan around
+          </li>
+          <li>
+            <strong>Auto Weight:</strong> When enabled, edge weight = pixel
+            distance × distance factor
+          </li>
+          <li>
+            <strong>Distance Factor:</strong> Adjust to convert pixels to
+            real-world units (e.g., 0.5 for cm, 2.5 for meters)
+          </li>
+          <li>
+            <strong>Tip:</strong> Right-click on a node to change its label
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const nodeIdInput = document.getElementById("nodeId");
+      const nodeTypeSelect = document.getElementById("nodeType");
+      const edgeWeightInput = document.getElementById("edgeWeight");
+      const autoWeightCheckbox = document.getElementById("autoWeight");
+      const distanceFactorInput = document.getElementById("distanceFactor");
+      const modeIndicator = document.getElementById("modeIndicator");
+      const nodeCountSpan = document.getElementById("nodeCount");
+      const edgeCountSpan = document.getElementById("edgeCount");
+
+      let mode = "addNode"; // 'addNode', 'addEdge', 'delete'
+      let nodes = [];
+      let edges = [];
+      let selectedNode = null;
+      let backgroundImage = null;
+
+      // Zoom and pan variables
+      let scale = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+      let isPanning = false;
+      let hasPanned = false; // Track if user actually moved during pan
+      let startPanX = 0;
+      let startPanY = 0;
+
+      const nodeColors = {
+        room: "#90EE90",
+        hallway: "#87CEEB",
+        entrance: "#FF6B6B",
+        elevator: "#FFD700",
+        stairs: "#FFA500",
+        restroom: "#DDA0DD",
+      };
+
+      // Load image
+      document.getElementById("imageUpload").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              backgroundImage = img;
+              canvas.width = img.width;
+              canvas.height = img.height;
+              draw();
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // Mode buttons
+      document.getElementById("addNodeBtn").addEventListener("click", () => {
+        mode = "addNode";
+        selectedNode = null;
+        updateModeIndicator();
+      });
+
+      document.getElementById("addEdgeBtn").addEventListener("click", () => {
+        mode = "addEdge";
+        selectedNode = null;
+        updateModeIndicator();
+      });
+
+      document.getElementById("deleteBtn").addEventListener("click", () => {
+        mode = "delete";
+        selectedNode = null;
+        updateModeIndicator();
+      });
+
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        if (confirm("Are you sure you want to clear all nodes and edges?")) {
+          nodes = [];
+          edges = [];
+          updateStats();
+          draw();
+        }
+      });
+
+      document
+        .getElementById("exportBtn")
+        .addEventListener("click", exportJSON);
+
+      document.getElementById("importBtn").addEventListener("click", () => {
+        document.getElementById("jsonUpload").click();
+      });
+
+      // Zoom controls
+      document.getElementById("zoomIn").addEventListener("click", () => {
+        zoom(1.2);
+      });
+
+      document.getElementById("zoomOut").addEventListener("click", () => {
+        zoom(0.8);
+      });
+
+      document.getElementById("zoomReset").addEventListener("click", () => {
+        scale = 1;
+        offsetX = 0;
+        offsetY = 0;
+        draw();
+      });
+
+      // Mouse wheel zoom
+      canvas.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Get world coordinates before zoom
+        const worldX = (mouseX - offsetX) / scale;
+        const worldY = (mouseY - offsetY) / scale;
+
+        // Apply zoom
+        const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+        scale *= zoomFactor;
+        scale = Math.max(0.1, Math.min(5, scale)); // Limit zoom range
+
+        // Adjust offset to zoom toward mouse position
+        offsetX = mouseX - worldX * scale;
+        offsetY = mouseY - worldY * scale;
+
+        draw();
+      });
+
+      // Panning with mouse drag
+      canvas.addEventListener("mousedown", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+
+        // Check if clicking on a node (don't pan)
+        const node = findNodeAt(x, y);
+        if (!node && e.button === 0) {
+          isPanning = true;
+          hasPanned = false; // Reset pan tracking
+          startPanX = e.clientX - offsetX;
+          startPanY = e.clientY - offsetY;
+          canvas.style.cursor = "grabbing";
+        }
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        if (isPanning) {
+          hasPanned = true; // User is actually dragging/panning
+          offsetX = e.clientX - startPanX;
+          offsetY = e.clientY - startPanY;
+          draw();
+        }
+      });
+
+      canvas.addEventListener("mouseup", () => {
+        isPanning = false;
+        canvas.style.cursor = "crosshair";
+      });
+
+      canvas.addEventListener("mouseleave", () => {
+        isPanning = false;
+        canvas.style.cursor = "crosshair";
+      });
+
+      document.getElementById("jsonUpload").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const data = JSON.parse(event.target.result);
+              nodes = data.nodes || [];
+              edges = data.edges || [];
+              updateStats();
+              draw();
+              alert("Graph imported successfully!");
+            } catch (error) {
+              alert("Error importing JSON: " + error.message);
+            }
+          };
+          reader.readAsText(file);
+        }
+      });
+
+      // Canvas click
+      canvas.addEventListener("click", (e) => {
+        // Don't process clicks if user was panning
+        if (hasPanned) {
+          hasPanned = false; // Reset for next interaction
+          return;
+        }
+        if (isPanning) return; // Don't process clicks while panning
+
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+
+        if (mode === "addNode") {
+          addNode(x, y);
+        } else if (mode === "addEdge") {
+          addEdge(x, y);
+        } else if (mode === "delete") {
+          deleteItem(x, y);
+        }
+      });
+
+      // Right-click to edit node
+      canvas.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left - offsetX) / scale;
+        const y = (e.clientY - rect.top - offsetY) / scale;
+
+        const node = findNodeAt(x, y);
+        if (node) {
+          const newId = prompt("Enter new node ID:", node.id);
+          if (newId && newId !== node.id) {
+            // Update edges that reference this node
+            edges.forEach((edge) => {
+              if (edge.source === node.id) edge.source = newId;
+              if (edge.target === node.id) edge.target = newId;
+            });
+            node.id = newId;
+            draw();
+          }
+        }
+      });
+
+      function addNode(x, y) {
+        // Check if node is within image boundaries
+        if (backgroundImage) {
+          if (
+            x < 0 ||
+            x > backgroundImage.width ||
+            y < 0 ||
+            y > backgroundImage.height
+          ) {
+            alert(
+              `⚠️ Node must be placed within image boundaries!\nImage size: ${
+                backgroundImage.width
+              }x${backgroundImage.height}px\nClick position: (${Math.round(
+                x
+              )}, ${Math.round(y)})`
+            );
+            return;
+          }
+        }
+
+        const id = nodeIdInput.value || `Node${nodes.length + 1}`;
+        const type = nodeTypeSelect.value;
+
+        nodes.push({ id, type, x, y });
+
+        // Auto-increment node ID
+        const match = id.match(/(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1]) + 1;
+          nodeIdInput.value = id.replace(
+            /\d+$/,
+            num.toString().padStart(match[1].length, "0")
+          );
+        }
+
+        updateStats();
+        draw();
+      }
+
+      function addEdge(x, y) {
+        const node = findNodeAt(x, y);
+
+        if (!node) return;
+
+        if (!selectedNode) {
+          selectedNode = node;
+          draw();
+        } else {
+          if (selectedNode.id !== node.id) {
+            let weight;
+
+            // Calculate weight based on checkbox
+            if (autoWeightCheckbox.checked) {
+              // Calculate Euclidean distance between nodes
+              const dx = node.x - selectedNode.x;
+              const dy = node.y - selectedNode.y;
+              const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+
+              // Apply distance factor
+              const factor = parseFloat(distanceFactorInput.value) || 1;
+              weight = Math.round(pixelDistance * factor);
+            } else {
+              // Use manual weight
+              weight = parseInt(edgeWeightInput.value) || 100;
+            }
+
+            // Add bidirectional edges
+            edges.push({ source: selectedNode.id, target: node.id, weight });
+            edges.push({ source: node.id, target: selectedNode.id, weight });
+
+            updateStats();
+          }
+          selectedNode = null;
+          draw();
+        }
+      }
+
+      function deleteItem(x, y) {
+        // Try to delete node
+        const nodeIndex = nodes.findIndex(
+          (n) => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 15
+        );
+
+        if (nodeIndex !== -1) {
+          const nodeId = nodes[nodeIndex].id;
+          nodes.splice(nodeIndex, 1);
+          edges = edges.filter(
+            (e) => e.source !== nodeId && e.target !== nodeId
+          );
+          updateStats();
+          draw();
+          return;
+        }
+
+        // Try to delete edge
+        for (let i = edges.length - 1; i >= 0; i--) {
+          const edge = edges[i];
+          const source = nodes.find((n) => n.id === edge.source);
+          const target = nodes.find((n) => n.id === edge.target);
+
+          if (source && target) {
+            const dist = distanceToLineSegment(
+              x,
+              y,
+              source.x,
+              source.y,
+              target.x,
+              target.y
+            );
+            if (dist < 10) {
+              edges.splice(i, 1);
+              updateStats();
+              draw();
+              return;
+            }
+          }
+        }
+      }
+
+      function findNodeAt(x, y) {
+        return nodes.find(
+          (n) => Math.sqrt((n.x - x) ** 2 + (n.y - y) ** 2) < 15
+        );
+      }
+
+      function distanceToLineSegment(px, py, x1, y1, x2, y2) {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+
+        if (lenSq !== 0) param = dot / lenSq;
+
+        let xx, yy;
+        if (param < 0) {
+          xx = x1;
+          yy = y1;
+        } else if (param > 1) {
+          xx = x2;
+          yy = y2;
+        } else {
+          xx = x1 + param * C;
+          yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function zoom(factor) {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // Get world coordinates of center before zoom
+        const worldX = (centerX - offsetX) / scale;
+        const worldY = (centerY - offsetY) / scale;
+
+        // Apply zoom
+        scale *= factor;
+        scale = Math.max(0.1, Math.min(5, scale)); // Limit zoom range
+
+        // Adjust offset to keep center point stable
+        offsetX = centerX - worldX * scale;
+        offsetY = centerY - worldY * scale;
+
+        draw();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Save the current transformation
+        ctx.save();
+
+        // Apply zoom and pan transformation
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+
+        // Draw background image
+        if (backgroundImage) {
+          ctx.globalAlpha = 0.6;
+          ctx.drawImage(backgroundImage, 0, 0);
+          ctx.globalAlpha = 1.0;
+        }
+
+        // Draw edges
+        edges.forEach((edge) => {
+          const source = nodes.find((n) => n.id === edge.source);
+          const target = nodes.find((n) => n.id === edge.target);
+
+          if (source && target) {
+            ctx.beginPath();
+            ctx.moveTo(source.x, source.y);
+            ctx.lineTo(target.x, target.y);
+            ctx.strokeStyle = "#666";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw weight label with background
+            const midX = (source.x + target.x) / 2;
+            const midY = (source.y + target.y) / 2;
+
+            // Calculate distance for display (optional info)
+            const dx = target.x - source.x;
+            const dy = target.y - source.y;
+            const pixelDist = Math.sqrt(dx * dx + dy * dy);
+
+            ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.fillRect(midX - 25, midY - 12, 50, 24);
+            ctx.strokeStyle = "#999";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(midX - 25, midY - 12, 50, 24);
+
+            ctx.fillStyle = "#000";
+            ctx.font = "bold 11px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(edge.weight, midX, midY + 4);
+
+            // Optionally show pixel distance in small text
+            // ctx.font = '8px Arial';
+            // ctx.fillStyle = '#666';
+            // ctx.fillText(`(${Math.round(pixelDist)}px)`, midX, midY + 12);
+          }
+        });
+
+        // Draw nodes
+        nodes.forEach((node) => {
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 15, 0, Math.PI * 2);
+          ctx.fillStyle = nodeColors[node.type] || "#90EE90";
+          ctx.fill();
+          ctx.strokeStyle = node === selectedNode ? "#FF0000" : "#000";
+          ctx.lineWidth = node === selectedNode ? 3 : 2;
+          ctx.stroke();
+
+          // Draw label
+          ctx.fillStyle = "#000";
+          ctx.font = "bold 12px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(node.id, node.x, node.y - 20);
+        });
+
+        // Restore the transformation
+        ctx.restore();
+      }
+
+      function updateModeIndicator() {
+        const modes = {
+          addNode: "Add Node",
+          addEdge: "Add Edge",
+          delete: "Delete",
+        };
+        modeIndicator.textContent = `Mode: ${modes[mode]}`;
+        modeIndicator.style.background = mode === "delete" ? "#f44336" : "#333";
+      }
+
+      function updateStats() {
+        nodeCountSpan.textContent = nodes.length;
+        edgeCountSpan.textContent = edges.length;
+      }
+
+      function exportJSON() {
+        const graphData = {
+          metadata: {
+            imageWidth: canvas.width,
+            imageHeight: canvas.height,
+            created: new Date().toISOString(),
+            description: "Graph with absolute X,Y coordinates",
+          },
+          nodes: nodes.map((n) => ({
+            id: n.id,
+            type: n.type,
+            x: Math.round(n.x),
+            y: Math.round(n.y),
+          })),
+          edges: edges,
+        };
+
+        const dataStr = JSON.stringify(graphData, null, 4);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "graph.json";
+        link.click();
+      }
+
+      // Initialize
+      canvas.width = 1200;
+      canvas.height = 800;
+      updateModeIndicator();
+      updateStats();
+      draw();
+    </script>
+  </body>
+</html>
