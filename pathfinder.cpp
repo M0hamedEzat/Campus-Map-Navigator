@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream> // For std::ifstream (file reading)
 #include <string>  // For std::string (used by the JSON parser)
-#include "json.hpp" // The JSON library you downloaded
+#include "json.hpp" // The JSON library
 
 // Use the nlohmann::json library
 using json = nlohmann::json;
@@ -62,13 +62,14 @@ struct MapNode {
 
 class StringIntMap {
 private:
-    MapNode** buckets;
+    MapNode** buckets; // pointer to an array of pointers 
     int numBuckets;
+    // hash function 
     unsigned long hash(const char* str) {
         unsigned long hash = 5381;
         int c;
         while ((c = *str++)) {
-            hash = ((hash << 5) + hash) + c;
+            hash = ((hash << 5) + hash) + c; // left shift by 5 bits ( * (32 + 1))
         }
         return hash % numBuckets;
     }
