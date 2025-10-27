@@ -30,3 +30,5 @@ priority queue.
 ### Hash Function
  - ``hash(key)``: Computes the hash value for a given key using the djb2 algorithm. 
  Uses Prime number 5381 and 33 for multiplication and addition respectively.
+
+ ## Stack

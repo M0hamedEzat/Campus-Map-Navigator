@@ -77,7 +77,7 @@ public:
 
 // priority queue
 struct HeapNode {
-    int vertex;
+    int nodeIndex;
     int distance;
 };
 
@@ -125,14 +125,14 @@ public:
     bool isEmpty() {
         return size == 0;
     }
-    void insert(int vertex, int distance) {
+    void insert(int nodeIndex, int distance) {
         if (size == capacity) {
             cout << "Priority queue is full!" << endl;
             return;
         }
         size++;
         int i = size - 1;
-        heapArray[i].vertex = vertex;
+        heapArray[i].nodeIndex = nodeIndex;
         heapArray[i].distance = distance;
         HpUp(i);
     }
@@ -150,7 +150,7 @@ public:
 
 // Stack for paths construction
 struct StackNode {
-    int vertex;
+    int nodeIndex;
     StackNode* next;
 };
 
@@ -167,9 +167,9 @@ public:
     bool isEmpty() {
         return top == nullptr;
     }
-    void push(int vertex) {
+    void push(int nodeIndex) {
         StackNode* newNode = new StackNode();
-        newNode->vertex = vertex;
+        newNode->nodeIndex = nodeIndex;
         newNode->next = top;
         top = newNode;
     }
@@ -178,10 +178,10 @@ public:
             return -1;
         }
         StackNode* temp = top;
-        int vertex = temp->vertex;
+        int nodeIndex = temp->nodeIndex;
         top = top->next;
         delete temp;
-        return vertex;
+        return nodeIndex;
     }
 };
 
@@ -331,7 +331,7 @@ void dijkstra(ManualGraph* graph, int startIndex, int endIndex, PathResult& resu
     // 3. Main Loop
     while (!pq.isEmpty()) {
         HeapNode minNode = pq.extractMin();
-        int u = minNode.vertex;
+        int u = minNode.nodeIndex;
         int u_dist = minNode.distance;
 
         if (u_dist > distances[u]) {
@@ -482,8 +482,8 @@ int main() {
 
         // Print path
         while (!path.isEmpty()) {
-            int vertex = path.pop();
-            cout << buildingGraph.indexToName[vertex];
+            int nodeIndex = path.pop();
+            cout << buildingGraph.indexToName[nodeIndex];
             if (!path.isEmpty()) {
                 cout << " -> ";
             }
