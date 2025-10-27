@@ -8,38 +8,38 @@ using json = nlohmann::json;
 using namespace std;
 
 // Hash table
-struct MapNode {
+struct HashNode {
     char key[50];
     int value;
-    MapNode* next;
-    MapNode() : value(0), next(nullptr) { key[0] = '\0'; }
+    HashNode* next;
+    HashNode() : value(0), next(nullptr) { key[0] = '\0'; }
 };
 
-class StringIntMap {
+class HashTable {
 private:
-    MapNode** buckets; // pointer to an array of pointers 
+    HashNode** buckets; // pointer to an array of pointers 
     int numBuckets;
     // hash function 
     unsigned long hash(const char* str) {
         unsigned long hash = 5381;
         int c;
         while ((c = *str++)) {
-            hash = ((hash << 5) + hash) + c; // left shift by 5 bits ( * (32 + 1))
+            hash = (33 * hash) + c;
         }
         return hash % numBuckets;
     }
 public:
-    StringIntMap(int size) : numBuckets(size) {
-        buckets = new MapNode*[numBuckets];
+    HashTable(int size) : numBuckets(size) {
+        buckets = new HashNode*[numBuckets];
         for (int i = 0; i < numBuckets; ++i) {
             buckets[i] = nullptr;
         }
     }
-    ~StringIntMap() {
+    ~HashTable() {
         for (int i = 0; i < numBuckets; ++i) {
-            MapNode* entry = buckets[i];
+            HashNode* entry = buckets[i];
             while (entry != nullptr) {
-                MapNode* prev = entry;
+                HashNode* prev = entry;
                 entry = entry->next;
                 delete prev;
             }
@@ -48,7 +48,7 @@ public:
     }
     void insert(const char* key, int value) {
         unsigned long bucketIndex = hash(key);
-        MapNode* entry = buckets[bucketIndex];
+        HashNode* entry = buckets[bucketIndex];
         while(entry != nullptr) {
             if(strcmp(entry->key, key) == 0) {
                 entry->value = value;
@@ -56,7 +56,7 @@ public:
             }
             entry = entry->next;
         }
-        MapNode* newNode = new MapNode();
+        HashNode* newNode = new HashNode();
         strcpy(newNode->key, key);
         newNode->value = value;
         newNode->next = buckets[bucketIndex];
@@ -64,7 +64,7 @@ public:
     }
     int get(const char* key) {
         unsigned long bucketIndex = hash(key);
-        MapNode* entry = buckets[bucketIndex];
+        HashNode* entry = buckets[bucketIndex];
         while (entry != nullptr) {
             if (strcmp(entry->key, key) == 0) {
                 return entry->value;
@@ -94,7 +94,7 @@ private:
         heapArray[i] = heapArray[j];
         heapArray[j] = temp;
     }
-    void siftDown(int i) {
+    void HpDown(int i) {
         int l = left(i);
         int r = right(i);
         int smallest = i;
@@ -106,10 +106,10 @@ private:
         }
         if (smallest != i) {
             swapNodes(i, smallest);
-            siftDown(smallest);
+            HpDown(smallest);
         }
     }
-    void siftUp(int i) {
+    void HpUp(int i) {
         while (i != 0 && heapArray[i].distance < heapArray[parent(i)].distance) {
             swapNodes(i, parent(i));
             i = parent(i);
@@ -134,7 +134,7 @@ public:
         int i = size - 1;
         heapArray[i].vertex = vertex;
         heapArray[i].distance = distance;
-        siftUp(i);
+        HpUp(i);
     }
     HeapNode extractMin() {
         if (isEmpty()) {
@@ -143,7 +143,7 @@ public:
         HeapNode root = heapArray[0];
         heapArray[0] = heapArray[size - 1];
         size--;
-        siftDown(0);
+        HpDown(0);
         return root;
     }
 };
@@ -198,13 +198,13 @@ class ManualGraph {
 public:
     int numVertices;
     AdjListNode** adjLists;
-    StringIntMap* nodeMap;
+    HashTable* nodeMap;
     char** indexToName;
     int currentNodeIndex;
 
     ManualGraph(int vertices) : numVertices(vertices), currentNodeIndex(0) {
         adjLists = new AdjListNode*[numVertices];
-        nodeMap = new StringIntMap(numVertices * 2);
+        nodeMap = new HashTable(numVertices * 2);
         indexToName = new char*[numVertices];
         for (int i = 0; i < numVertices; ++i) {
             adjLists[i] = nullptr;
